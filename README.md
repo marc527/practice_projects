@@ -1,2 +1,2 @@
 # practice_projects
-Just some code written for learning react and vue
+Just some codes written for learning react and vue

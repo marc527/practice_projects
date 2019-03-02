@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Vue School Chat Room</title>
+  <script src="https://unpkg.com/vue"></script>
+  <script src="https://www.gstatic.com/firebasejs/5.7.0/firebase.js"></script>
+  <script src="https://unpkg.com/native-toast@1.2.1/dist/native-toast.js"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/native-toast@1.2.1/dist/native-toast.css">
+</head>
+<body>
+<div id="chat" class="container">
+  <h1>Vue School Chat Room</h1>
+  <!-- Messages -->
+  <div v-for="message in messages" class="card">
+    <div class="card-body">
+      <!-- nickname -->
+      <h6 class="card-subtitle mb-2 text-muted">{{ message.nickname }}</h6>
+      <!-- content -->
+      <p v-if="message !== editingMessage" class="card-text">{{ message.text }}</p>
+      <textarea v-else v-model="messageText" class="form-control"></textarea>
+
+      <div v-if="editingMessage === message">
+        <a href="#" @click.prevent="updateMessage">update</a>
+        <a href="#" @click.prevent="cancel">cancel</a>
+      </div>
+      <div v-else>
+        <a href="#" @click.prevent="deleteMessage(message)">delete</a>
+        <a href="#" @click.prevent="editMessage(message)">edit</a>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+  <!-- New Message -->
+  <form v-if="!editingMessage" @submit.prevent="storeMessage">
+    <div class="form-group">
+      <label>Message:</label>
+      <textarea v-model="messageText" class="form-control"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Nickname:</label>
+      <input v-model="nickname" class="form-control"/>
+    </div>
+    <button class="btn btn-primary">Send</button>
+  </form>
+</div>
+
+
+<script type="text/javascript">
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyD77xV3-CYtEZchrfSxOJG-NPh15DAd8eI",
+    authDomain: "vue-project-d0884.firebaseapp.com",
+    databaseURL: "https://vue-project-d0884.firebaseio.com",
+    projectId: "vue-project-d0884",
+    storageBucket: "vue-project-d0884.appspot.com",
+    messagingSenderId: "970175568212"
+  }
+
+  firebase.initializeApp(config)
+
+  // connet to database
+  const database = firebase.database()
+
+  const messagesRef = database.ref('messages')
+
+  new Vue({
+    el: "#chat",
+    data: {
+      messages: [],
+      messageText: '',
+      nickname: 'hootlex',
+      editingMessage: null
+    },
+    methods: {
+      storeMessage () {
+        messagesRef.push({ text: this.messageText, nickname: this.nickname })
+        this.messageText = ''
+      },
+      deleteMessage (message) {
+        messagesRef.child(message.id).remove()
+      },
+      editMessage (message) {
+        this.editingMessage = message
+        this.messageText = message.text
+      },
+      updateMessage () {
+        messagesRef.child(this.editingMessage.id).update({text: this.messageText})
+        this.cancel()
+      },
+      cancel () {
+        this.editingMessage = null
+        this.messageText = ''
+      }
+    },
+    created () {
+      messagesRef.on('child_added', snapshot => this.messages.push({...snapshot.val(), id: snapshot.key}))
+      messagesRef.on('child_removed', snapshot => {
+        this.messages = this.messages.filter(message => message.id !== snapshot.key)
+      })
+      messagesRef.on('child_changed', snapshot => {
+        const message = this.messages.find(message => message.id === snapshot.key)
+        message.text = snapshot.val().text
+      })
+    }
+  })
+</script>
+</body>
+</html>

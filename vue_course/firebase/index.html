@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Vue Authentication</title>
+  <script src="https://unpkg.com/vue"></script>
+  <script src="https://www.gstatic.com/firebasejs/5.7.0/firebase.js"></script>
+  <script src="https://unpkg.com/native-toast@1.2.1/dist/native-toast.js"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/native-toast@1.2.1/dist/native-toast.css">
+</head>
+<body>
+<div id="app" class="container">
+
+  <div v-if="authUser">
+    <p>Signed in as {{authUser.email}}</p>
+    <p>{{ authUser.displayName }}</p>
+    <p>your favourite food is {{ authUser.favouriteFood }}</p>
+    <img :src="authUser.photoURL" alt="" width="100">
+    <button @click="signOut">signOut</button>
+    <button v-if="!linkedToGoogle" @click="linkToGoogle">link to google</button>
+    <div v-else>
+      Linked to google
+      <button @click="unlinkGoogle">unlink</button>
+    </div>
+
+    <p v-if="linkedToEmail">Linked to Email</p>
+    <form @submit.prevent="updateProfile">
+      <h2>Update Profile</h2>
+      <input type="text" v-model="displayName">
+      <input type="text" v-model="photoURL">
+      <button type="submit" name="button">edit</button>
+    </form>
+
+    <form @submit.prevent="updateEmail">
+      <h2>Update Email</h2>
+      <input type="email" v-model="email">
+      <button type="submit" name="button">edit</button>
+    </form>
+
+    <form @submit.prevent="updatePassword">
+      <h2>Update password</h2>
+      <input type="password" v-model="newPassword">
+      <button type="submit" name="button">edit</button>
+    </form>
+
+    <form @submit.prevent="updateCustomDetails">
+      <h2>Update favourite Food</h2>
+      <input type="text" v-model="favouriteFood">
+      <button type="submit" name="button">edit</button>
+    </form>
+  </div>
+
+  <div v-else>
+    <form @submit.prevent="register">
+      <h2>Register</h2>
+      <input type="email" placeholder="email" v-model="email">
+      <input type="password" placeholder="password" v-model="password">
+      <button type="submit" name="button">register</button>
+    </form>
+
+    <form @submit.prevent="signIn">
+      <h2>Sign in</h2>
+      <input type="email" placeholder="email" v-model="email">
+      <input type="password" placeholder="password" v-model="password">
+      <button type="submit" name="button">Sign in</button>
+    </form>
+
+    <div>
+      <p>sign in with google</p>
+      <button type="button" @click="signInWithGoogle">sign in with google</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/5.7.1/firebase.js"></script>
+
+<script type="text/javascript">
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyD77xV3-CYtEZchrfSxOJG-NPh15DAd8eI",
+    authDomain: "vue-project-d0884.firebaseapp.com",
+    databaseURL: "https://vue-project-d0884.firebaseio.com",
+    projectId: "vue-project-d0884",
+    storageBucket: "vue-project-d0884.appspot.com",
+    messagingSenderId: "970175568212"
+  };
+  firebase.initializeApp(config);
+
+  new Vue({
+    el: '#app',
+    data: {
+      email: '',
+      password: '',
+      authUser: null,
+      displayName: null,
+      photoURL: null,
+      newPassword: null,
+      favouriteFood: ''
+    },
+    computed: {
+      linkedToGoogle () {
+        return !!this.authUser.providerData.find(provider => provider.providerId === 'google.com')
+      },
+      linkedToEmail () {
+        return !!this.authUser.providerData.find(provider => provider.providerId === 'password')
+      }
+    },
+    methods: {
+      register () {
+        firebase.auth().createUserWithEmailAndPassword(this.email, this.password)
+      },
+      signOut () {
+        firebase.auth().signOut()
+      },
+      signIn () {
+        firebase.auth().signInWithEmailAndPassword(this.email, this.password)
+          .then(() => console.log('sign in!'))
+          .catch(error => alert('error'))
+      },
+      signInWithGoogle () {
+        const provider = new firebase.auth.GoogleAuthProvider()
+        firebase.auth().signInWithPopup(provider)
+          .catch(error => alert(error.message))
+          .then(user => console.log(user))
+      },
+      updateProfile () {
+        this.authUser.updateProfile({
+          displayName: this.displayName,
+          photoURL: this.photoURL
+        })
+        .then(() => alert('success'))
+      },
+      updateEmail () {
+        this.authUser.updateEmail(this.email)
+        .then(() => alert('success'))
+        .catch(() => alert('fail'))
+      },
+      updatePassword () {
+        this.authUser.updatePassword(this.newPassword)
+        .then(() => this.newPassword = null)
+        .catch(error => alert(error.message))
+      },
+      linkToGoogle () {
+        const provider = new firebase.auth.GoogleAuthProvider()
+        this.authUser.linkWithPopup(provider)
+          .then(() => alert('success'))
+      },
+      unlinkGoogle () {
+        this.authUser.unlink('google.com')
+          .then(() => alert('success'))
+      },
+      updateCustomDetails () {
+        firebase.database().ref('users').child(this.authUser.uid)
+          .update({ favouriteFood: this.favouriteFood })
+          .then(data => console.log(data))
+      }
+    },
+    created () {
+      firebase.auth().onAuthStateChanged(user => {
+        console.log('user', user.uid)
+        this.authUser = user
+
+        if (user) {
+          this.displayName = user.displayName
+          this.photoURL = user.photoURL
+          this.email = user.email
+
+          firebase.database().ref('users').child(this.authUser.uid)
+            .once('value', snapshot => {
+              console.log(snapshot.val())
+              if(snapshot.val()) {
+                this.favouriteFood = snapshot.val().favouriteFood
+                Vue.set(this.authUser, 'favouriteFood', this.favouriteFood)
+              }
+            })
+
+        }
+      })
+    }
+  })
+</script>
+</body>
+</html>

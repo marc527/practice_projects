@@ -1,0 +1,49 @@
+ul {
+  list-style: none;
+}
+
+.languages {
+  display: flex;
+  list-style: none;
+}
+
+.languages li {
+  padding: 0 20px;
+}
+
+.languages li.selected {
+  font-weight: 600;
+}
+
+.popular-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.popular-item {
+  margin: 20px;
+  text-align: center;
+}
+
+.space-list-items {
+    list-style: none;
+}
+
+.space-list-avatar {
+  width: 40px;
+  height: 40px;
+  text-align: center;
+}
+
+.active {
+  font-weight: bold;
+}
+
+.nav {
+  display: flex;
+}
+
+.nav li {
+  padding: 0 20px;
+}
